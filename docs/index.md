@@ -354,6 +354,8 @@ In order to run the Acceptance Tests for development, the following environment 
 
 * `OVH_DBAAS_LOGS_SERVICE_TEST` - The name of your Dbaas logs service.
 
+* `OVH_VAC_RESOURCE`, `OVH_VAC_PROFILE`, `OVH_VAC_PREFIX` - The ID of your VAC resource, a VAC profile offering the `LOW`, `MEDIUM` and `HIGH` sensitivities, and a CIDR that no other policy protects, to test the network_defense_vac data sources and the network_defense_vac_policy resource. The tests create and delete a policy on this CIDR.
+
 * `OVH_DBAAS_LOGS_LOGSTASH_VERSION_TEST` - The name of your Dbaas logs Logstash version.
 
 * `OVH_TESTACC_ORDER_VRACK` - set this variable to "yes" will order vracks.

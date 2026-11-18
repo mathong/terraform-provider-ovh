@@ -1,0 +1,33 @@
+---
+subcategory : "Network Defense (VAC)"
+---
+
+# ovh_network_defense_vac_resource (Data Source)
+
+Use this data source to read a VAC DDoS protection resource. A VAC resource groups protection policies. It is ordered outside Terraform.
+
+## Example Usage
+
+```terraform
+data "ovh_network_defense_vac_resource" "vac" {
+  resource_name = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+```
+
+## Argument Reference
+
+- `resource_name` (String) ID of the VAC resource
+
+## Attributes Reference
+
+- `id` (String) Unique identifier of the resource
+- `name` (String) Name you chose for the resource
+- `resource_status` (String) Current status of the resource: `READY` or `DELETING`
+- `created_at` (String) Date and time the resource was created
+- `updated_at` (String) Date and time the resource was last updated
+- `iam` (Attributes) IAM resource metadata
+  - `id` (String) Unique identifier of the resource
+  - `urn` (String) Unique resource name used in policies
+  - `display_name` (String) Resource display name
+  - `state` (String) Resource state
+  - `tags` (Map of String) Resource tags. Tags computed internally are prefixed with `ovh:`

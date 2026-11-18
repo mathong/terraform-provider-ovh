@@ -14,6 +14,7 @@ import (
 
 type GenericAPIv2Resource struct {
 	ResourceStatus string `json:"resourceStatus"`
+	ErrorMessage   string `json:"errorMessage"`
 }
 
 const (
@@ -96,5 +97,30 @@ func WaitForAPIv2ResourceStatusReady(ctx context.Context, c *ovhwrap.Client, url
 		default:
 			return retry.RetryableError(fmt.Errorf("resource not ready, retrying (current status: %s)", resource.ResourceStatus))
 		}
+	})
+}
+
+// WaitForAPIv2ResourceDeleted retries a GET on the given URL until it returns 404.
+// It expects the given URL to target a route that fetches an asynchronous resource on APIv2.
+func WaitForAPIv2ResourceDeleted(ctx context.Context, c *ovhwrap.Client, url string) error {
+	return retry.RetryContext(ctx, time.Hour, func() *retry.RetryError {
+		var resource GenericAPIv2Resource
+
+		if err := c.GetWithContext(ctx, url, &resource); err != nil {
+			if IsNotFound(err) {
+				return nil
+			}
+			// go-ovh returns *APIError, so a value type assertion would never match.
+			var ovhErr *ovh.APIError
+			if errors.As(err, &ovhErr) && ovhErr.Code < http.StatusInternalServerError {
+				return retry.NonRetryableError(fmt.Errorf("failed to fetch %q : %s", url, ovhErr))
+			}
+			return retry.RetryableError(fmt.Errorf("call to %q failed, retrying (error: %s)", url, err))
+		}
+
+		if resource.ResourceStatus == "ERROR" {
+			return retry.NonRetryableError(fmt.Errorf("resource deletion failed: resource is in status ERROR: %s", resource.ErrorMessage))
+		}
+		return retry.RetryableError(fmt.Errorf("resource still present, retrying (current status: %s)", resource.ResourceStatus))
 	})
 }
