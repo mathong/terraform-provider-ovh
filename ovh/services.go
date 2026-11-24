@@ -53,6 +53,9 @@ func serviceIdFromResourceName(c *ovhwrap.Client, resourceName string) (int, err
 	if err := c.Get(endpoint, &serviceIds); err != nil {
 		return 0, fmt.Errorf("failed to get service infos: %w", err)
 	}
+	if len(serviceIds) == 0 {
+		return 0, fmt.Errorf("no service found for resource %q", resourceName)
+	}
 
 	return serviceIds[0], nil
 }
@@ -63,6 +66,9 @@ func serviceIdFromRouteAndResourceName(c *ovhwrap.Client, route, resourceName st
 
 	if err := c.Get(endpoint, &serviceIds); err != nil {
 		return 0, fmt.Errorf("failed to get service infos: %w", err)
+	}
+	if len(serviceIds) == 0 {
+		return 0, fmt.Errorf("no service found for resource %q", resourceName)
 	}
 
 	return serviceIds[0], nil

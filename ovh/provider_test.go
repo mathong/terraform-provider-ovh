@@ -530,6 +530,20 @@ func testAccPreCheckOkms(t *testing.T) {
 	checkEnvOrSkip(t, "OVH_OKMS")
 }
 
+func testAccPreCheckNetworkDefenseVac(t *testing.T) {
+	testAccPreCheckCredentials(t)
+	checkEnvOrSkip(t, "OVH_VAC_RESOURCE")
+	checkEnvOrSkip(t, "OVH_VAC_PROFILE")
+	checkEnvOrSkip(t, "OVH_VAC_PREFIX")
+}
+
+func testAccPreCheckOrderNetworkDefenseVac(t *testing.T) {
+	testAccPreCheckCredentials(t)
+	checkEnvOrSkip(t, "OVH_TESTACC_ORDER_VAC")
+	checkEnvOrSkip(t, "OVH_VAC_PROFILE")
+	checkEnvOrSkip(t, "OVH_VAC_PREFIX")
+}
+
 func testAccPreCheckOkmsCredential(t *testing.T) {
 	testAccPreCheckCredentials(t)
 	checkEnvOrSkip(t, "OVH_OKMS")

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -115,5 +116,71 @@ func TestGetAllPagesV2_SinglePage(t *testing.T) {
 	}
 	if regionCalls != 1 {
 		t.Errorf("expected exactly 1 page request, got %d", regionCalls)
+	}
+}
+
+func newDeleteWaitTestServer(t *testing.T, path string, statuses ...int) (*httptest.Server, *int32) {
+	t.Helper()
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/auth/time":
+			fmt.Fprint(w, "1700000000")
+		case path:
+			i := atomic.AddInt32(&calls, 1) - 1
+			status := statuses[min(int(i), len(statuses)-1)]
+			w.WriteHeader(status)
+			if status == http.StatusOK {
+				fmt.Fprint(w, `{"resourceStatus":"DELETING"}`)
+			} else {
+				fmt.Fprint(w, `{"class":"Client::Error","message":"error"}`)
+			}
+		default:
+			t.Errorf("unexpected request path: %q", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	t.Cleanup(server.Close)
+	return server, &calls
+}
+
+func TestWaitForAPIv2ResourceDeleted_WaitsFor404(t *testing.T) {
+	const path = "/v2/test/resource/1"
+	server, calls := newDeleteWaitTestServer(t, path, http.StatusOK, http.StatusNotFound)
+
+	if err := WaitForAPIv2ResourceDeleted(context.Background(), newTestClient(t, server.URL), path); err != nil {
+		t.Fatalf("WaitForAPIv2ResourceDeleted returned an error: %s", err)
+	}
+	if *calls != 2 {
+		t.Errorf("expected 2 GET calls, got %d", *calls)
+	}
+}
+
+func TestWaitForAPIv2ResourceDeleted_StopsOnClientError(t *testing.T) {
+	const path = "/v2/test/resource/1"
+	server, calls := newDeleteWaitTestServer(t, path, http.StatusForbidden)
+
+	if err := WaitForAPIv2ResourceDeleted(context.Background(), newTestClient(t, server.URL), path); err == nil {
+		t.Fatal("expected an error on 403, got nil")
+	}
+	if *calls != 1 {
+		t.Errorf("expected 1 GET call, got %d", *calls)
+	}
+}
+
+func TestWaitForAPIv2ResourceStatusReady_ErrorIncludesMessage(t *testing.T) {
+	const path = "/v2/test/resource/1"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/auth/time" {
+			fmt.Fprint(w, "1700000000")
+			return
+		}
+		fmt.Fprint(w, `{"resourceStatus":"ERROR","errorMessage":"use force"}`)
+	}))
+	t.Cleanup(server.Close)
+
+	err := WaitForAPIv2ResourceStatusReady(context.Background(), newTestClient(t, server.URL), path)
+	if err == nil || !strings.Contains(err.Error(), "use force") {
+		t.Fatalf("expected error containing the API errorMessage, got %v", err)
 	}
 }
